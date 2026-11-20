@@ -27,14 +27,57 @@ description: 查看 Andrew 的 g130-40、g130-51、g130-35 和本机 GPU，打�
 
 ## 通过 lab-platform 分发任务
 
-查看资源和打开看板仅执行只读采样。在用户要求提交任务时，先从当前工程配置、文档或用户授权的连接中核验 Andrew 可用的 lab-platform 实例、API 地址、平台主机 ID 和资源准入。当前个人看板没有接入此平台。缺少该实例或访问权限时汇报具体缺项。
+个人看板只读。用户要求提交任务时，从当前项目或已授权的环境核验自己的平台中心、CLI、API、镜像仓库、凭据来源和主机注册状态。以该实例的 `README.md`、`config.local.json`、`labplatform/core.py` 和实时 API 为准。平台主机 ID 由平台注册信息确定，可能与看板名称不同。当前工作站尚未核验 Andrew 的平台实例和任务准入。
 
-1. 使用已确认的 `lab` CLI 查询主机、GPU 和活动任务，或用 [资源查询脚本](scripts/pool_status.py) 读取资源与预留。脚本使用 `LAB_URL` 和已配置的 `LAB_TOKEN_FILE` 或 `LAB_PLATFORM_DIR`。可用 `--refresh` 刷新监控探针，用 `--host` 指定平台主机 ID。只选择在线、非维护、采样新鲜、Docker 可用、占用已知且空闲、无未结束任务预留的候选卡。按任务核验 CPU、内存、显存与驱动。
-2. 按 [任务规格与兼容性](references/task-spec.md) 准备镜像、代码和资产。固定镜像 digest，核验 CUDA、GPU 架构、驱动和关键源码补丁。新组合先做一次代表性短测。代码与资产使用允许目录下的版本化快照。继承实验的记录器、日志、检查点频率和回传路径。
-3. 提交前再次核对资源。将任务文件与任务记录保存在当前工程，记录任务用途、主机、GPU UUID、镜像 digest、资产 ID、任务 ID、提交时间和输出位置。平台返回 `RUNNING` 且日志显示真实计算进展，才报告已运行。
-4. 独立任务可在多张空闲卡并行。按实际任务需求限制并发和等待预算。同一卡逐个执行，多卡训练需要程序支持。仅明确未受理的资源竞争可刷新后重试；提交超时先查已登记任务，避免重复投递。仅取消本次授权的任务。
-5. 按约定回传并核验文件。平台的训练状态和结果同步状态分别核对。结果同步失败重试传输，保留任务 ID 和远端产物以便恢复。
+- 处于其他主机时，使用已核验的 SSH 连接在平台中心执行 CLI，或转发该中心的环回 API。任务 YAML 里的 `code` 和资产 `source` 取平台中心上允许访问的绝对路径。不要在看板所在机器上假定已部署中心。
+- 用已确认实例的 `lab` CLI。已知协议的实例支持指定主机和 GPU。跨机自动选择、等待与重试由调用侧按用户授权实现。引擎本身无自动选机、排队、抢占或重试。
+
+### 查询并筛选资源
+
+```bash
+lab hosts
+lab gpu PLATFORM_HOST_ID
+python3 scripts/pool_status.py --refresh --host PLATFORM_HOST_ID
+python3 scripts/pool_status.py --min-free-mib 21000 --cpus 8 --memory-gib 32
+```
+
+脚本从技能根目录运行。先配置已核验的 `LAB_URL`，令牌用 `LAB_TOKEN_FILE`、`LAB_PLATFORM_DIR/.runtime/token` 或已有的 `LAB_TOKEN`，也可用 `--url`、`--token-file`、`--platform-dir`。用 `--host`、`--exclude-host` 限定范围，`--min-driver-major`、`--max-age` 检查驱动主版本和采样新鲜度。`--refresh` 仅刷新采样。确认训练入口、数据、输出、主机、GPU 数量和并行需求。
+
+按用户指定主机和卡选择。候选机须在线、非维护、数据新鲜，Docker 可用，且 GPU 占用已知、空闲、无非终态任务预留。按任务核对 CPU、主机内存、显存、驱动和 GPU UUID。候选结果供准入前初筛，实际资源仍由平台在准入和容器启动前复查。
+
+### 准备并提交
+
+- 按 [任务规格与兼容性](references/task-spec.md) 准备镜像、代码和资产。固定镜像 digest，核对 CUDA、GPU 架构、驱动和容器实际加载的关键源码补丁。新组合在同一镜像内先执行代表性短测。
+- 只快照必要普通文件，数据和权重使用不可变资产。容器代码目录 `/workspace` 和资产目录 `/inputs/<asset-id>` 只读，输出放在 `/outputs`。`cuda:0` 是容器分配后的逻辑编号。
+- 沿用训练入口、实验名、`run_name`、记录器、在线项目、指标、step 和保存频率。需要训练期间增量回传时，提交前确认 `/outputs` 到原任务目录的映射并准备独立同步器。记录器及回传验收细节见任务规格。
+
+```bash
+lab submit /absolute/path/on/platform-center/task.yaml --host PLATFORM_HOST_ID --gpus 0
+lab status TASK_ID
+lab logs TASK_ID
+```
+
+也可通过已核验的 `POST /api/tasks` 提交等价 JSON。API 客户端关闭环境代理并设置超时，令牌留在认证流程里。提交前重查资源。在任务工程保存实际任务文件与台账，记录主机、GPU UUID、镜像 digest、资产 ID、任务 ID、时间和输出位置。涉及在线记录或实时回传时记录 run ID/URL、路径映射、同步器标识、轮询间隔、最后成功时间和错误。
+
+`PREPARING` 是准备中。状态为 `RUNNING` 且日志显示真实计算进展后再报告运行。分别核验真实指标已到达在线记录器、训练日志和配置已出现在原目录并在更新、检查点按原频率保存和回传。常规核验使用有限次数的状态和日志查询，`logs --follow` 留给交互查看。
+
+### 并行、等待与恢复
+
+- 独立的评估、训练或数据批次可并行。有依赖的阶段按顺序，同一张卡逐个执行。多卡训练需要入口本身支持。核对同一主机上并发任务的 CPU 和内存总需求。共享资产保持不可变，资产准备需要时在同一主机内串行。
+- 保存逻辑任务到平台任务 ID 的映射，先持久化一次提交结果再投递下一项。用户要求持续调度或实时回传时，复用工程控制器或建立独立运行的控制器。记录轮询间隔、重试预算与退出条件，回传在终态补齐后结束。
+- 已明确拒绝的资源竞争可刷新后改用允许的候选。提交超时或结果未知时先核对平台任务和本地台账，确认未受理后再投递。路径、权限、资产校验和兼容性错误按根因处理。仅取消用户授权的任务。
+
+### 终态回传与报告
+
+```bash
+lab results TASK_ID --output /absolute/path/to/results
+lab cancel TASK_ID  # 仅在用户要求停止该任务时执行。
+```
+
+`SUCCEEDED`、`FAILED`、`CANCELED` 是终态。`UNKNOWN` 等非终态仍保留 GPU 预留。对终态补齐已产生的文件并核验原产物目录，确认记录器正常 flush/finish 和末次指标。平台归档下载适用于终态。回传失败按预算重试传输，保留远端结果。分别报告训练、在线记录和回传状态，附任务 ID、实际主机和 GPU、run 链接、日志或产物目录。持续任务说明已建立的同步机制与查看方式。
 
 ## 技能同步
 
 本技能的仓库是 [andrewliang01/andrew-skills](https://github.com/andrewliang01/andrew-skills)，路径为 `skills/lab-gpu-dispatch/`。授权同步时提交该目录的相关改动并核对远端版本。公开源码使用 SSH 别名与本地配置，IP、个人机器上的绝对路径、密码和令牌留在本机。
+
+上游功能对照以 [NanHaibei 的技能目录](https://github.com/NanHaibei/flowus-recording-rules/tree/main/skills/lab-gpu-dispatch) 为参考。历史验收环境见任务规格。
