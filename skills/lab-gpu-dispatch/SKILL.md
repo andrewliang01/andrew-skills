@@ -14,7 +14,7 @@ description: 查看 Andrew 的 g130-40、g130-51、g130-35 和本机 GPU，打�
 | g130-35 | `andrew@g130-35` | 2 × RTX 4090 |
 | 本机 | 直接查询 | 1 × RTX 5090 |
 
-- Ubuntu 当前工作站可点击桌面或左侧 Dock 的「个人 GPU 看板」。服务运行时可打开 [本机看板](http://127.0.0.1:8765)。它通过 NVIDIA 驱动显示 GPU 利用率、显存、温度与计算进程，页面打开时每 15 秒采样。
+- Ubuntu 当前工作站可点击桌面或左侧 Dock 的「个人 GPU 看板」，在 Edge 专用窗口全屏打开。服务运行时可打开 [本机看板](http://127.0.0.1:8765)。它通过 NVIDIA 驱动显示 GPU 利用率、显存、温度与计算进程，页面打开时每 15 秒采样。
 - 先用现有 SSH 配置和本机 `nvidia-smi` 查询。核对别名、账号和主机指纹。g130-35 的内网地址从本机配置获取。g130-40 和 g130-51 已验证现有 SSH 密钥可用。g130-35 无可用密钥时让用户在终端隐藏输入密码。凭据只在本机认证流程中使用。
 - 若需另装或恢复看板，使用随技能提供的 [看板源码](assets/gpu-monitor/server.py)。从技能根目录运行：
 
@@ -22,12 +22,12 @@ description: 查看 Andrew 的 g130-40、g130-51、g130-35 和本机 GPU，打�
   python3 assets/gpu-monitor/server.py --password-35
   ```
 
-  需要 Python 3.9+、SSH、`nvidia-smi`；g130-35 的密码模式还需要 `sshpass`。已有该节点的密钥时省略 `--password-35`。若系统没有 g130-35 别名，可在启动进程的环境里用 `GPU_MONITOR_G130_35_HOST` 指定已核验的地址或别名。服务只监听回环地址，默认端口 8765，端口冲突时用 `--port`。GNOME 和 Edge 下可运行 `bash assets/gpu-monitor/launch-desktop.sh`，启动器会复用已经运行的看板或打开终端提示。
+  需要 Python 3.9+、SSH、`nvidia-smi`；g130-35 的密码模式还需要 `sshpass`。已有该节点的密钥时省略 `--password-35`。若系统没有 g130-35 别名，可在启动进程的环境里用 `GPU_MONITOR_G130_35_HOST` 指定已核验的地址或别名。服务只监听回环地址，默认端口 8765，端口冲突时用 `--port`。GNOME 和 Edge 下可运行 `bash assets/gpu-monitor/launch-desktop.sh`，启动器会复用已经运行的看板或打开终端提示。在 Ubuntu X11 会话里会将专用 Edge 窗口设为全屏。
 - “低占用”表示无可见计算进程、GPU 利用率 ≤ 5%、显存占用 ≤ 512 MiB。用它初筛，再确认平台预留、CPU、主机内存和镜像兼容性。采样失败或占用未知时保留未知状态。静态硬件清单不能代替实时采样。
 
 ## 通过 lab-platform 分发任务
 
-个人看板只读。用户要求提交任务时，从当前项目或已授权的环境核验自己的平台中心、CLI、API、镜像仓库、凭据来源和主机注册状态。以该实例的 `README.md`、`config.local.json`、`labplatform/core.py` 和实时 API 为准。平台主机 ID 由平台注册信息确定，可能与看板名称不同。当前工作站尚未核验 Andrew 的平台实例和任务准入。
+个人看板只读。用户要求提交任务时，从当前项目或已授权的环境核验自己的平台中心、CLI、API、镜像仓库、凭据来源和主机注册状态。以该实例的 `README.md`、`config.local.json`、`labplatform/core.py` 和实时 API 为准。平台主机 ID 由平台注册信息确定，可能与看板名称不同。Andrew 的个人平台中心当前部署在 `g130-51`，服务为 `andrew-lab-platform.service`。当前平台只登记该节点，本机和其他两台服务器仍可在看板查看。本工作站通过已安装的 `lab` SSH 入口访问。先运行 `lab health` 和 `lab config` 确认实例。用 `lab pool --refresh` 在中心查询资源和预留；`lab submit` 与 `lab results --output` 所用绝对路径位于中心。平台令牌在中心读取。
 
 - 处于其他主机时，使用已核验的 SSH 连接在平台中心执行 CLI，或转发该中心的环回 API。任务 YAML 里的 `code` 和资产 `source` 取平台中心上允许访问的绝对路径。不要在看板所在机器上假定已部署中心。
 - 用已确认实例的 `lab` CLI。已知协议的实例支持指定主机和 GPU。跨机自动选择、等待与重试由调用侧按用户授权实现。引擎本身无自动选机、排队、抢占或重试。

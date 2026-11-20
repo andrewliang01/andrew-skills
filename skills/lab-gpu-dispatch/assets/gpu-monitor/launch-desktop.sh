@@ -7,7 +7,7 @@ url=http://127.0.0.1:8765
 # 确认端口对应本看板，再复用现有服务。
 if page="$(curl --noproxy '*' -fs --max-time 2 "$url/")"; then
     if [[ "$page" == *'<title>Andrew · GPU 资源看板</title>'* ]]; then
-        exec microsoft-edge "--app=$url"
+        exec python3 -B "$root/edge-app.py" "$url"
     fi
 fi
 

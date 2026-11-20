@@ -12,6 +12,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 import shutil
 import subprocess
+import sys
 from threading import Lock
 from time import monotonic
 
@@ -232,7 +233,7 @@ def main():
                 try:
                     # 浏览器窗口和终端服务有各自的生命周期。
                     subprocess.Popen(
-                        ["microsoft-edge", f"--app={url}"],
+                        [sys.executable, "-B", str(Path(__file__).with_name("edge-app.py")), url],
                         stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
                         start_new_session=True,
                     )
