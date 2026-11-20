@@ -1,4 +1,4 @@
-"""打开专用 Edge 窗口，并在 Ubuntu X11 会话中切到全屏。"""
+"""打开最大化的 Edge 看板窗口，保留窗口标题栏。"""
 
 import os
 import subprocess
@@ -8,24 +8,23 @@ from time import monotonic, sleep
 
 def open_edge(url):
     """
-    打开 Edge 的应用窗口并使用浏览器的全屏启动参数。
+    打开 Edge 的应用窗口并使用浏览器的最大化启动参数。
     输入本机看板 URL，返回启动的进程句柄。
     """
     return subprocess.Popen(
-        ["microsoft-edge", f"--app={url}", "--start-fullscreen"],
+        ["microsoft-edge", f"--app={url}", "--start-maximized"],
         stdin=subprocess.DEVNULL, start_new_session=True,
     )
 
 
-def open_fullscreen(url):
+def open_maximized(url):
     """
     复用准确匹配的看板窗口，必要时等待新窗口就绪。
-    输入本机看板 URL，通过 X11 窗口管理器设置全屏并将窗口前置。
+    输入本机看板 URL，通过 X11 退出旧全屏状态、最大化并前置窗口。
     """
     try:
         from Xlib import X, Xatom, display, error
         from Xlib.protocol.event import ClientMessage
-
     except ImportError:
         open_edge(url)
         return
@@ -39,6 +38,8 @@ def open_fullscreen(url):
         root = connection.screen().root
         atom = connection.intern_atom
         fullscreen = atom("_NET_WM_STATE_FULLSCREEN")
+        horizontal = atom("_NET_WM_STATE_MAXIMIZED_HORZ")
+        vertical = atom("_NET_WM_STATE_MAXIMIZED_VERT")
         started = False
         deadline = monotonic() + 12
         while monotonic() < deadline:
@@ -56,7 +57,8 @@ def open_fullscreen(url):
                 if not title or title.value.decode(errors="replace") != "Andrew · GPU 资源看板":
                     continue
                 for message, fields in (
-                    ("_NET_WM_STATE", [1, fullscreen, 0, 1, 0]),
+                    ("_NET_WM_STATE", [0, fullscreen, 0, 1, 0]),
+                    ("_NET_WM_STATE", [1, horizontal, vertical, 1, 0]),
                     ("_NET_ACTIVE_WINDOW", [1, X.CurrentTime, 0, 0, 0]),
                 ):
                     event = ClientMessage(window=window, client_type=atom(message), data=(32, fields))
@@ -72,4 +74,4 @@ def open_fullscreen(url):
 
 
 if __name__ == "__main__":
-    open_fullscreen(sys.argv[1])
+    open_maximized(sys.argv[1])
