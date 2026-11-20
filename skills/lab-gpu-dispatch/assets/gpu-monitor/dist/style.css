@@ -88,6 +88,9 @@ progress::-moz-progress-bar { background: var(--blue); border-radius: 5px; }
 .track { height: 5px; border-radius: 5px; background: #27364b; }
 .gpu-footer { margin-top: 10px; padding-top: 8px; border-top: 1px solid #253247; display: flex; justify-content: space-between; gap: 8px; font-size: .81rem; color: var(--muted); }
 .gpu-footer strong { font-family: var(--mono); color: var(--text); }
+.gpu-owners { display: flex; gap: 8px; margin-top: 7px; font-size: .85rem; color: var(--muted); }
+.gpu-owners span { flex-shrink: 0; }
+.gpu-owners b { color: var(--text); overflow-wrap: anywhere; }
 details { margin-top: 8px; font-size: .82rem; }
 summary { cursor: pointer; color: var(--blue); }
 .apps { margin: 7px 0 0; padding: 0; list-style: none; color: var(--muted); }

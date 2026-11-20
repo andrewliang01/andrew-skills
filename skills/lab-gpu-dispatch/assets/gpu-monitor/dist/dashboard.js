@@ -38,6 +38,8 @@ function card(gpu, host, openDetails) {
   const apps = gpu.processes.map((app) => (
     `<li><b>${app.username ? `用户 ${escapeText(app.username)}` : "用户未知"}</b> · ${escapeText(app.name)} · PID ${app.pid} · ${app.memory === null ? "显存未知" : `${gib(app.memory)} GiB`}</li>`
   )).join("");
+  // 同一用户有多个进程时，卡片只列一次。
+  const owners = [...new Set(gpu.processes.map((app) => app.username || "未知"))];
   const processStatus = gpu.process_known ? `${gpu.processes.length} 个进程` : "进程数据不全";
 
   return `<article class="gpu" aria-label="GPU ${gpu.index}">
@@ -48,6 +50,7 @@ function card(gpu, host, openDetails) {
     <div class="metric"><span class="metric-label">利用率<b>${utilization}</b></span>${utilBar}</div>
     <div class="metric"><span class="metric-label">显存<b>${memory}</b></span>${memoryBar}</div>
     <div class="gpu-footer"><span>温度 <strong>${temperature}</strong></span><span>${processStatus}</span></div>
+    ${owners.length ? `<div class="gpu-owners"><span>计算用户</span><b>${owners.map(escapeText).join("、")}</b></div>` : ""}
     ${apps ? `<details data-key="${key}" ${openDetails.has(key) ? "open" : ""}><summary>计算进程</summary><ul class="apps">${apps}</ul></details>` : ""}
   </article>`;
 }
