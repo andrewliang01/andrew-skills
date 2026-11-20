@@ -36,7 +36,7 @@ function card(gpu, host, openDetails) {
     ? '<div class="track"></div>'
     : `<progress class="memory" aria-label="已用显存" value="${gpu.used}" max="${gpu.total}"></progress>`;
   const apps = gpu.processes.map((app) => (
-    `<li><b>${escapeText(app.name)}</b> · PID ${app.pid} · ${app.memory === null ? "显存未知" : `${gib(app.memory)} GiB`}</li>`
+    `<li><b>${app.username ? `用户 ${escapeText(app.username)}` : "用户未知"}</b> · ${escapeText(app.name)} · PID ${app.pid} · ${app.memory === null ? "显存未知" : `${gib(app.memory)} GiB`}</li>`
   )).join("");
   const processStatus = gpu.process_known ? `${gpu.processes.length} 个进程` : "进程数据不全";
 

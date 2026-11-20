@@ -31,7 +31,23 @@ LOW_UTILIZATION = 5  # 利用率阈值，单位为百分比。
 PROBE = """export LC_ALL=C
 nvidia-smi --query-gpu=index,uuid,name,utilization.gpu,memory.used,memory.total,temperature.gpu --format=csv,noheader,nounits || exit $?
 printf '\\n__GPU_PROCESSES__\\n'
-nvidia-smi --query-compute-apps=gpu_uuid,pid,process_name,used_gpu_memory --format=csv,noheader,nounits || printf '\\n__PROCESS_ERROR__\\n'
+if apps=$(nvidia-smi --query-compute-apps=gpu_uuid,pid,process_name,used_gpu_memory --format=csv,noheader,nounits); then
+    printf '%s\\n' "$apps"
+    printf '\\n__GPU_PROCESS_USERS__\\n'
+    # 在同一主机按 PID 批量查询有效用户名。
+    pids=$(printf '%s\\n' "$apps" | awk -F, '{
+        gsub(/[[:space:]]/, "", $2)
+        if ($2 ~ /^[0-9]+$/ && !seen[$2]++) {
+            printf "%s%s", separator, $2
+            separator = ","
+        }
+    }')
+    if [ -n "$pids" ]; then
+        ps -p "$pids" -o pid= -o euser:128= || :
+    fi
+else
+    printf '\\n__PROCESS_ERROR__\\n'
+fi
 """
 
 
@@ -52,6 +68,13 @@ def parse_probe(output):
     gpu_csv, marker, process_csv = output.partition("__GPU_PROCESSES__")
     if not marker:
         raise ValueError("显卡采样输出不完整")
+    process_csv, _, user_rows = process_csv.partition("__GPU_PROCESS_USERS__")
+    usernames = {}
+    for line in user_rows.splitlines():
+        fields = line.split(maxsplit=1)
+        if len(fields) == 2 and fields[0].isdecimal() and not fields[1].isdecimal():
+            usernames[int(fields[0])] = fields[1].strip()
+
     processes = {}
     process_known = "__PROCESS_ERROR__" not in process_csv
     for row in csv.reader(process_csv.splitlines(), skipinitialspace=True):
@@ -60,9 +83,11 @@ def parse_probe(output):
         if len(row) != 4 or integer(row[1]) is None:
             process_known = False
             continue
-        uuid, pid, name, memory = row
+        uuid, pid_field, name, memory = row
+        pid = int(pid_field)
         processes.setdefault(uuid, []).append({
-            "pid": integer(pid), "name": name.rsplit("/", 1)[-1], "memory": integer(memory),
+            "pid": pid, "name": name.rsplit("/", 1)[-1], "memory": integer(memory),
+            "username": usernames.get(pid),
         })
 
     gpus = []
