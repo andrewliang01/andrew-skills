@@ -1,0 +1,7 @@
+interface:
+  display_name: "Andrew 的 GPU 看板与任务分发"
+  short_description: "查看 Andrew 的四台主机资源，按需通过已确认的平台分发训练和评估任务"
+  default_prompt: "使用 $lab-gpu-dispatch 查看四台主机的实时 GPU 状态和低占用卡。"
+
+policy:
+  allow_implicit_invocation: true

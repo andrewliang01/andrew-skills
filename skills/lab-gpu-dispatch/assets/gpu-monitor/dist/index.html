@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <meta name="description" content="在本机浏览器中查看四台设备的 NVIDIA GPU 状态。">
+  <title>Andrew · GPU 资源看板</title>
+  <link rel="stylesheet" href="/style.css">
+  <script defer src="/dashboard.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand"><span class="chip" aria-hidden="true"></span><b>GPU 资源看板</b></div>
+      <span class="account"><span class="dot"></span> Andrew 的 GPU 池</span>
+    </div>
+  </header>
+
+  <main>
+    <section class="intro" aria-labelledby="title">
+      <div>
+        <h1 id="title">GPU 监控</h1>
+        <p>显存、利用率和计算进程一览</p>
+      </div>
+      <div class="refresh">
+        <div class="sample">
+          <span class="sample-label">最近采样 <time id="timestamp">—</time></span>
+          <span id="refresh-status" role="status">每 15 秒自动刷新</span>
+        </div>
+        <button class="refresh-button" id="refresh" type="button"><span aria-hidden="true">↻</span> 立即刷新</button>
+      </div>
+    </section>
+
+    <section class="summary" aria-label="资源概览">
+      <div class="stat"><span class="stat-label">在线主机</span><div class="stat-value" id="online">—</div></div>
+      <div class="stat"><span class="stat-label">已检测 GPU</span><div class="stat-value" id="detected">—</div></div>
+      <div class="stat"><span class="stat-label"><span class="dot green"></span>低占用 GPU</span><div class="stat-value green-text" id="low">—</div></div>
+      <div class="stat"><span class="stat-label">显存余量</span><div class="stat-value" id="memory">—</div></div>
+    </section>
+
+    <section aria-labelledby="hosts-title">
+      <div class="section-header">
+        <h2 id="hosts-title">主机与显卡</h2>
+        <div class="segmented" role="group" aria-label="筛选显卡">
+          <button type="button" aria-pressed="true" data-filter="all">全部显卡</button>
+          <button type="button" aria-pressed="false" data-filter="low">仅低占用</button>
+        </div>
+      </div>
+      <p id="notice" class="notice" role="status">正在读取四台主机的 GPU 状态…</p>
+      <div class="hosts" id="hosts"></div>
+      <p class="footnote"><b>低占用</b>　无可见计算进程 · GPU 利用率 ≤ 5% · 显存占用 ≤ 512 MiB。平台预留需另行核对。</p>
+    </section>
+  </main>
+</body>
+</html>
